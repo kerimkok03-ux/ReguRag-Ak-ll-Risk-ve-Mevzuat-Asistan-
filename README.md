@@ -22,16 +22,22 @@ Yüklenen mevzuat PDF'lerine soru soran, cevabı **kaynak maddeyle birlikte** g�
 
 ## Mimari
 
-```mermaid
-flowchart LR
-    A["PDF belgesi"] --> B["Madde madde parçalama"]
-    B --> C["Embedding: nomic-embed-text"]
-    C --> D[("ChromaDB")]
-    Q["Kullanıcı sorusu"] --> E["Hibrit arama: vektör + anahtar kelime"]
-    D --> E
-    E --> F["En ilgili maddeler"]
-    F --> G["Yerel LLM: qwen2.5:3b"]
-    G --> H["Cevap + kaynak madde metni"]
+```
+PDF belgesi
+   │
+   ▼
+Madde madde parçalama ──► Embedding (nomic-embed-text) ──► ChromaDB
+                                                              │
+Kullanıcı sorusu ──► Hibrit arama (vektör + anahtar kelime) ◄─┘
+                              │
+                              ▼
+                     En ilgili maddeler
+                              │
+                              ▼
+                  Yerel LLM (qwen2.5:3b)
+                              │
+                              ▼
+              Cevap + kaynak madde metni
 ```
 
 ## Teknolojiler
