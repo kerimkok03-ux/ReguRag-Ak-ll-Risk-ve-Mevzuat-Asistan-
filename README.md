@@ -1,46 +1,104 @@
-# 🛡️ ReguRAG: Akıllı Risk ve Mevzuat Asistanı
+# ReguRAG: Akıllı Risk ve Mevzuat Asistanı
 
-**ReguRAG**, e-ticaret, fintek ve müşteri hizmetleri ekiplerinin uzun mevzuat metinleri arasında manuel arama yaparken kaybettiği zamanı azaltmak için geliştirilmiş, **%100 yerel çalışan RAG (Retrieval-Augmented Generation)** tabanlı bir mevzuat soru-cevap asistanıdır.
+Yüklenen mevzuat PDF'lerine soru soran, cevabı **kaynak maddeyle birlikte** gösteren, **tamamen yerel çalışan** bir RAG (Retrieval-Augmented Generation) asistanı.
 
-İade, cayma hakkı, ek ücret ve itiraz (chargeback) gibi süreçlerdeki soruları yanıtlar ve cevabın **hangi mevzuat maddesinden alındığını kaynak göstererek (`[K1]`)** kanıtlar.
+**Hazırlayan:** Kerim KÖK
 
----
+## Ne yapar?
 
-## ✨ Temel Özellikler
+Şirket çalışanlarının uzun mevzuat metinleri arasında manuel arama yaparken kaybettiği zamanı azaltır. Kullanıcı "Cayma hakkı süresi kaç gündür?" gibi bir soru sorar; sistem ilgili maddeyi bulur, cevabı üretir ve cevabın altında kaynak madde metnini gösterir. Böylece kullanıcı cevabı kaynaktan doğrulayabilir.
 
-* **%100 Yerel ve Gizlilik Odaklı:** Vektör veritabanı (`ChromaDB`), anlamsal arama (`bge-m3`) ve dil modeli (**Ollama / `qwen2.5:3b`**) tamamen yerel olarak çalışır; belgeler ve sorular kesinlikle şirket dışına çıkmaz.
-* **Kaynak Kanıtlı Cevaplar:** Cevaplar yalnızca yüklenen belgelere dayandırılır. Her cevabın sonunda ilgili kaynak etiketi (`[K1]`) ve madde metni gösterilerek halüsinasyon riski azaltılır.
-* **Madde Bazlı Parçalama:** Mevzuat PDF'leri yapısını bozmadan madde madde parçalanarak indekslenir.
-* **Dinamik PDF Yükleme:** Örnek belge olarak *Mesafeli Sözleşmeler Yönetmeliği* kullanılmıştır. Kullanıcılar arayüzden kendi PDF belgelerini yükleyerek asistanı farklı mevzuat ve iç prosedürlerle anında kullanabilir.
+Örnek belge olarak **Mesafeli Sözleşmeler Yönetmeliği** kullanılmıştır. Arayüzden kendi PDF belgenizi de yükleyebilirsiniz.
 
----
+## Özellikler
 
-## 🎯 Hedef Sektör ve Kullanım Alanları
+- **Tamamen yerel:** Yapay zekâ modeli (Ollama) kendi bilgisayarınızda çalışır. Belgeler ve sorular dışarı çıkmaz, dış yapay zekâ servisi kullanılmaz.
+- **Kaynak gösterir:** Her cevabın altında ilgili madde metni, sayfa ve madde numarası görünür.
+- **Madde bazlı parçalama:** PDF, maddelere göre bölünür. Üst/alt bilgiler ve dipnotlar temizlenir.
+- **Hibrit arama:** Anlamsal (vektör) arama ile anahtar kelime aramasını birleştirir.
+- **PDF yükleme:** Arayüzden yeni PDF eklenip aynı anda sorgulanabilir.
+- **Örnek soru butonları:** Standlarda ve sunumlarda tek tıkla kullanım için.
+- **REST API:** FastAPI ile `/ask`, `/upload`, `/files` uç noktaları. API dokümantasyonu: `http://localhost:8000/docs`
 
-* **E-Ticaret & Fintek Firmaları:** Mesafeli satış mevzuatına hızlı uyum.
-* **Müşteri Hizmetleri & İade/İtiraz (Chargeback) Ekipleri:** Müşteri taleplerine mevzuata uygun, hatasız dönüş yapma.
-* **Hukuk & Uyum Birimleri:** Yeni çalışanların mevzuata hızlı adaptasyonu ve insan kaynaklı hataların azaltılması.
+## Mimari
 
----
+```mermaid
+flowchart LR
+    A["PDF belgesi"] --> B["Madde madde parçalama"]
+    B --> C["Embedding: nomic-embed-text"]
+    C --> D[("ChromaDB")]
+    Q["Kullanıcı sorusu"] --> E["Hibrit arama: vektör + anahtar kelime"]
+    D --> E
+    E --> F["En ilgili maddeler"]
+    F --> G["Yerel LLM: qwen2.5:3b"]
+    G --> H["Cevap + kaynak madde metni"]
+```
 
-## 🛠️ Teknoloji Yığını
+## Teknolojiler
 
-* **Backend:** Python, FastAPI
-* **Vektör Veritabanı:** ChromaDB (Yerel)
-* **Embedding Modeli:** `bge-m3` (Ollama)
-* **Yerel Dil Modeli (LLM):** `qwen2.5:3b` (Ollama)
-* **Altyapı:** Docker & Docker Compose
-* **Arayüz:** HTML / CSS / JavaScript
+| Bileşen | Kullanılan |
+|---|---|
+| API | FastAPI + Uvicorn |
+| Vektör veritabanı | ChromaDB |
+| Embedding modeli | nomic-embed-text (Ollama) |
+| Dil modeli | qwen2.5:3b (Ollama) |
+| PDF okuma | pypdf |
+| Arayüz | Tek dosya HTML/JS |
+| Çalıştırma | Docker Compose |
 
----
+## Kurulum
 
-## 🚀 Kurulum ve Çalıştırma
+**Gereksinimler:** Docker Desktop ve Ollama kurulu ve açık olmalı. GPU gerekmez, yaklaşık 8 GB RAM yeterlidir.
 
-### Gereksinimler
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-* [Ollama](https://ollama.com/)
-
-### 1. Projeyi Klonlayın
 ```bash
-git clone [https://github.com/kerimkok03-ux/ReguRag-Ak-ll-Risk-ve-Mevzuat-Asistan-.git](https://github.com/kerimkok03-ux/ReguRag-Ak-ll-Risk-ve-Mevzuat-Asistan-.git)
-cd ReguRag-Ak-ll-Risk-ve-Mevzuat-Asistan-
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text
+```
+
+PDF belgenizi `data/` klasörüne koyun, sonra:
+
+```bash
+docker compose up --build
+```
+
+Tarayıcıda `http://localhost:8000` adresini açın. İlk açılışta PDF indekslenir (1-3 dakika). Yeni bir PDF'i baştan indekslemek için `chroma_db` klasörünün içini silip yeniden başlatın.
+
+## Proje yapısı
+
+```
+app/
+  main.py       FastAPI uç noktaları
+  ingest.py     PDF okuma, temizleme, madde bazlı parçalama, indeksleme
+  rag.py        Arama, prompt ve cevap üretimi
+  index.html    Sohbet ve PDF yükleme arayüzü
+data/           PDF belgeleri
+chroma_db/      Vektör veritabanı (otomatik oluşur)
+docker-compose.yml
+Dockerfile
+requirements.txt
+```
+
+## Örnek sorular
+
+- Cayma hakkı süresi kaç gündür ve ne zaman başlar?
+- Ön bilgilendirme metni en az kaç punto büyüklüğünde olmalıdır?
+- Satıcı, tüketicinin açık onayı olmadan ilave ödeme talep edebilir mi?
+- Mal kargoda hasar görürse kim sorumludur?
+
+Arayüzdeki örnek soru butonlarının cevapları, yönetmelik madde metinlerinden önceden hazırlanmıştır ve cevabın sonunda "Önceden doğrulanmış örnek yanıt" etiketiyle belirtilir. Serbest yazılan sorular yerel model tarafından üretilir.
+
+## Sınırlamalar
+
+- **Küçük model:** `qwen2.5:3b` Türkçe hukuk metinlerinde zaman zaman hata yapabilir (örneğin olumlu cümleyi olumsuza çevirmek, yanlış maddeyi karıştırmak). Bu nedenle her cevabın altında kaynak madde gösterilir ve kullanıcının doğrulaması önerilir.
+- **Dipnotlar dışarıda:** PDF'teki değişiklik dipnotları (ör. 2024'te yürürlüğe giren değişiklikler) arama dışında bırakılmıştır. Bazı maddelerin güncel hali bu nedenle yanıtlara yansımayabilir.
+- **Ölçüm yok:** Sistemin doğruluğu henüz geniş bir test setiyle ölçülmemiştir.
+- **Hız:** CPU üzerinde bir cevap 1-3 dakika sürebilir. GPU ile belirgin şekilde kısalır.
+- **Güvenlik:** Kimlik doğrulama ve HTTPS yoktur. Yerel demo amaçlıdır.
+- **Belge türü:** Madde yapısı (MADDE 1 – ...) olan mevzuat PDF'lerinde en iyi sonucu verir. Farklı yapıdaki belgelerde parçalama daha basit çalışır.
+
+## Gelecek çalışmalar
+
+- Daha büyük model veya GPU desteği
+- Soru-cevap doğruluğunu ölçen bir test seti
+- Şirkete özel iç prosedür belgelerinin eklenmesi
+- Kişisel veri (TCKN, IBAN) maskeleme
