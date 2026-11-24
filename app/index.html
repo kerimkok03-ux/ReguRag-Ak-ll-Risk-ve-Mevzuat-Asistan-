@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ReguRAG - Mevzuat ve Risk Asistanı</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #1e293b;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #334155;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #38bdf8;
+        }
+
+        .upload-box {
+            margin: 15px 0;
+            padding: 12px;
+            border: 1px dashed #475569;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .upload-box input {
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .btn {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #0369a1;
+        }
+
+        .btn:disabled {
+            background: #475569;
+            cursor: wait;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            font-size: 13px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .file-item {
+            padding: 8px;
+            background: #0f172a;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
+
+        .badge {
+            font-size: 12px;
+            color: #4ade80;
+            margin-top: 10px;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .msg {
+            max-width: 85%;
+            padding: 14px 16px;
+            border-radius: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            align-self: flex-end;
+            background: #0284c7;
+            color: white;
+        }
+
+        .bot {
+            align-self: flex-start;
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        .sources {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #334155;
+            font-size: 12px;
+            color: #94a3b8;
+            white-space: normal;
+        }
+
+        .sources details {
+            margin-top: 6px;
+            background: #0f172a;
+            border-radius: 6px;
+            padding: 6px 10px;
+        }
+
+        .sources summary {
+            cursor: pointer;
+            color: #cbd5e1;
+        }
+
+        .srctext {
+            margin-top: 6px;
+            white-space: pre-wrap;
+            max-height: 220px;
+            overflow-y: auto;
+            color: #e2e8f0;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .note {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #fbbf24;
+            white-space: normal;
+        }
+
+        .fast {
+            font-size: 11px;
+            color: #4ade80;
+            margin-top: 6px;
+            white-space: normal;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 24px 0;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+        }
+
+        .chip {
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .chip:hover {
+            background: #334155;
+        }
+
+        .input-bar {
+            display: flex;
+            gap: 10px;
+            padding: 12px 24px 6px;
+            background: #1e293b;
+        }
+
+        .input-bar input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 14px;
+        }
+
+        .input-bar button {
+            width: auto;
+            padding: 0 24px;
+        }
+
+        .footer {
+            padding: 0 24px 10px;
+            background: #1e293b;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <h2>ReguRAG Asistan</h2>
+        <div class="upload-box">
+            <input type="file" id="pdfFile" accept=".pdf">
+            <button class="btn" onclick="uploadPDF()">Yeni PDF Yükle</button>
+            <div id="uploadStatus" style="font-size:12px; margin-top:8px; color:#38bdf8;"></div>
+        </div>
+        <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Yüklü Mevzuatlar:</div>
+        <div class="file-list" id="fileList"></div>
+        <div class="badge">🔒 Tamamen yerel çalışır. Veriler dışarı çıkmaz.</div>
+    </div>
+    <div class="chat-area">
+        <div class="messages" id="messages">
+            <div class="msg bot">Merhaba! Yüklü mevzuat PDF'leri hakkında soru sorabilirsin. Aşağıdaki örnek sorulara
+                tıklayabilir veya kendi sorunu yazabilirsin.</div>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="input-bar">
+            <input type="text" id="questionInput" placeholder="Mevzuatla ilgili sorunuzu yazın..."
+                onkeypress="if(event.key==='Enter') askQuestion()">
+            <button class="btn" id="sendBtn" onclick="askQuestion()">Gönder</button>
+        </div>
+        <div class="footer">Yapay zekâ yanıtları hata içerebilir. Yanıtı her zaman altındaki kaynak madde metniyle
+            doğrulayın.</div>
+    </div>
+    <script>
+        // Örnek sorular: önce hepsini bir kez sor, yanlış cevap vereni buradan sil.
+        const ORNEKLER = [
+            "Cayma hakkı süresi kaç gündür ve ne zaman başlar?",
+            "Ön bilgilendirme metni en az kaç punto büyüklüğünde olmalıdır?",
+            "Satıcı, tüketicinin açık onayı olmadan ilave ödeme talep edebilir mi?",
+            "Satıcı iade bedelini kaç gün içinde geri ödemelidir?",
+            "Hangi sözleşmelerde cayma hakkı kullanılamaz?",
+            "Mal kargoda hasar görürse kim sorumludur?",
+            "Satıcı işleme ilişkin bilgi ve belgeleri kaç yıl saklamak zorundadır?",
+            "Mal satışlarında teslim süresi en fazla kaç gündür?"
+        ];
+
+        let busy = false;
+
+        function buildChips() {
+            const box = document.getElementById('chips');
+            ORNEKLER.forEach(q => {
+                const b = document.createElement('button');
+                b.className = 'chip';
+                b.textContent = q;
+                b.onclick = () => sendQuestion(q);
+                box.appendChild(b);
+            });
+        }
+
+        async function loadFiles() {
+            try {
+                const res = await fetch('/files');
+                const data = await res.json();
+                const list = document.getElementById('fileList');
+                list.innerHTML = '';
+                data.files.forEach(f => {
+                    const d = document.createElement('div');
+                    d.className = 'file-item';
+                    d.textContent = '📄 ' + f;
+                    list.appendChild(d);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdfFile');
+            if (!fileInput.files.length) return;
+            const status = document.getElementById('uploadStatus');
+            status.innerText = "Yükleniyor ve indeksleniyor...";
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Yükleme başarısız');
+                status.innerText = `Eklendi (${data.chunks_added} parça)`;
+                loadFiles();
+            } catch (e) {
+                status.innerText = '⚠️ ' + e.message;
+            }
+        }
+
+        function askQuestion() {
+            const input = document.getElementById('questionInput');
+            const q = input.value.trim();
+            if (!q) return;
+            input.value = '';
+            sendQuestion(q);
+        }
+
+        async function sendQuestion(q) {
+            if (busy) return;
+            busy = true;
+            document.getElementById('sendBtn').disabled = true;
+            const msgs = document.getElementById('messages');
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'msg user';
+            userDiv.textContent = q;
+            msgs.appendChild(userDiv);
+
+            const loading = document.createElement('div');
+            loading.className = 'msg bot';
+            loading.textContent = 'Yanıt hazırlanıyor... (ilk soru 1-2 dakika sürebilir)';
+            msgs.appendChild(loading);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 320000);
+
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q }),
+                    signal: controller.signal
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `Sunucu hatası (${res.status})`);
+                }
+                const data = await res.json();
+                loading.textContent = '';
+
+                const ans = document.createElement('div');
+                ans.textContent = data.answer;
+                loading.appendChild(ans);
+
+                if (data.cached) {
+                    const f = document.createElement('div');
+                    f.className = 'fast';
+                    f.textContent = '⚡ Önceden hesaplanmış yanıt';
+                    loading.appendChild(f);
+                }
+
+                if (data.sources && data.sources.length) {
+                    const box = document.createElement('div');
+                    box.className = 'sources';
+                    const title = document.createElement('b');
+                    title.textContent = 'Kaynak maddeler (doğrulamak için tıklayın):';
+                    box.appendChild(title);
+                    data.sources.forEach((s, i) => {
+                        const d = document.createElement('details');
+                        if (i === 0) d.open = true;
+                        const sm = document.createElement('summary');
+                        sm.textContent = `${s.tag} ${s.source} · Sayfa ${s.page}` + (s.madde ? ` · Madde ${s.madde}` : '');
+                        const t = document.createElement('div');
+                        t.className = 'srctext';
+                        t.textContent = s.text;
+                        d.appendChild(sm);
+                        d.appendChild(t);
+                        box.appendChild(d);
+                    });
+                    loading.appendChild(box);
+                }
+
+                const note = document.createElement('div');
+                note.className = 'note';
+                note.textContent = '⚠ Yapay zekâ yanıtı hata içerebilir; kesin bilgi için yukarıdaki kaynak madde metnine bakın.';
+                loading.appendChild(note);
+            } catch (e) {
+                loading.textContent = '⚠️ Hata: ' + (e.name === 'AbortError' ? 'Zaman aşımı' : e.message);
+            } finally {
+                clearTimeout(timer);
+                busy = false;
+                document.getElementById('sendBtn').disabled = false;
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+        }
+
+        buildChips();
+        loadFiles();
+    </script>
+</body>
+
+</html>
