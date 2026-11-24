@@ -12,13 +12,13 @@ Yüklenen mevzuat PDF'lerine soru soran, cevabı **kaynak maddeyle birlikte** g�
 
 ## Özellikler
 
-- **Tamamen yerel:** Yapay zekâ modeli (Ollama) kendi bilgisayarınızda çalışır. Belgeler ve sorular dışarı çıkmaz, dış yapay zekâ servisi kullanılmaz.
+- **Tamamen yerel:** Yapay zekâ modeli (Ollama) kendi bilgisayarınızda çalışır. Belgeler ve sorular dışarı çıkmaz, dış yapay zekâ servisi (bulut API'si) kullanılmaz.
 - **Kaynak gösterir:** Her cevabın altında ilgili madde metni, sayfa ve madde numarası görünür.
 - **Madde bazlı parçalama:** PDF, maddelere göre bölünür. Üst/alt bilgiler ve dipnotlar temizlenir.
 - **Hibrit arama:** Anlamsal (vektör) arama ile anahtar kelime aramasını birleştirir.
 - **PDF yükleme:** Arayüzden yeni PDF eklenip aynı anda sorgulanabilir.
 - **Örnek soru butonları:** Standlarda ve sunumlarda tek tıkla kullanım için.
-- **REST API:** FastAPI ile `/ask`, `/upload`, `/files` uç noktaları. API dokümantasyonu: `http://localhost:8000/docs`
+- **Kendi REST API'si:** FastAPI ile `/ask`, `/upload`, `/files` uç noktaları. API dokümantasyonu: `http://localhost:8000/docs`
 
 ## Mimari
 
@@ -44,7 +44,7 @@ Kullanıcı sorusu ──► Hibrit arama (vektör + anahtar kelime) ◄─┘
 
 | Bileşen | Kullanılan |
 |---|---|
-| API | FastAPI + Uvicorn |
+| Sunucu / REST API (kendi API'miz) | FastAPI + Uvicorn (dış yapay zekâ API'si kullanılmaz) |
 | Vektör veritabanı | ChromaDB |
 | Embedding modeli | nomic-embed-text (Ollama) |
 | Dil modeli | qwen2.5:3b (Ollama) |

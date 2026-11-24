@@ -8,7 +8,8 @@ from app.ingest import get_embedding, CHROMA_DIR, COLLECTION
 OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
 LLM_MODEL = "qwen2.5:3b"
 CACHE_PATH = os.path.join(CHROMA_DIR, "answer_cache.json")
-TOP_K = 3
+TOP_K = 2
+PROMPT_CHUNK_CHARS = 1000
 
 MADDE_NO = re.compile(r"madde\s*(\d+(?:\s*/\s*[a-zA-Z])?)", re.IGNORECASE)
 STOP = {
@@ -18,16 +19,15 @@ STOP = {
     "edebilir", "yapılır", "gerekir", "kimdir", "ne", "zaman", "sonra", "önce",
 }
 
-SYSTEM_PROMPT = """Sen bir Türk mevzuatı asistanısın. Kullanıcının sorusunu SADECE verilen yönetmelik metinlerine dayanarak Türkçe cevaplarsın.
+SYSTEM_PROMPT = """Sen bir Türk mevzuatı asistanısın. Soruyu SADECE verilen yönetmelik metinlerine dayanarak Türkçe cevaplarsın.
 
 Kurallar:
-- Önce [K1] metnine bak. Cevap [K1] içindeyse sadece onu kullan, diğer metinlerle karıştırma.
-- Önce doğrudan cevabı söyle (1-2 cümle), gerekirse bir cümle açıklama ekle. En fazla 4 cümle yaz.
-- Sayıları ve süreleri metinde yazdığı gibi aktar. Kendin hesaplama yapma, sayı uydurma.
-- "değildir", "olamaz", "zorundadır", "sorumludur" gibi ifadeleri aynen koru. Olumlu cümleyi olumsuza, olumsuzu olumluya ÇEVİRME.
-- Ana kural ile istisnaları karıştırma. Metin bir kişiye yükümlülük yüklüyorsa o kişiyi doğru söyle (satıcı, tüketici, aracı hizmet sağlayıcı).
+- Önce [K1] metnine bak. Cevap [K1] içindeyse sadece onu kullan.
+- Doğrudan cevabı söyle, en fazla 3 cümle yaz.
+- Sayıları ve süreleri metinde yazdığı gibi aktar, sayı uydurma.
+- "değildir", "olamaz", "zorundadır", "sorumludur" gibi ifadeleri aynen koru, olumluyu olumsuza çevirme.
 - Kullandığın bilginin yanına kaynak etiketini yaz, örneğin [K1].
-- Metinlerde soruyla ilgili hiçbir bilgi yoksa sadece "Bu bilgiyi yüklü metinlerde bulamadım." de."""
+- Metinlerde ilgili bilgi yoksa sadece "Bu bilgiyi yüklü metinlerde bulamadım." de."""
 
 ETIKET = "\n\n✔ Önceden doğrulanmış örnek yanıt (madde metninden hazırlandı)"
 
@@ -213,7 +213,7 @@ def ask_rag(question: str, top_k: int = TOP_K):
         tag = f"[K{idx}]"
         madde = meta.get("madde", "")
         label = f"Sayfa {meta['page']}" + (f", Madde {madde}" if madde else "")
-        context_parts.append(f"{tag} ({label}):\n{doc}")
+        context_parts.append(f"{tag} ({label}):\n{doc[:PROMPT_CHUNK_CHARS]}")
         sources.append(make_source(tag, doc, meta))
 
     context = "\n\n".join(context_parts)
@@ -235,15 +235,15 @@ Yukarıdaki metinlere dayanarak soruyu cevapla."""
                 ],
                 "stream": False,
                 "keep_alive": "30m",
-                "options": {"temperature": 0.0, "num_ctx": 4096, "num_predict": 250}
+                "options": {"temperature": 0.0, "num_ctx": 2048, "num_predict": 160}
             },
-            timeout=(10, 300)
+            timeout=(10, 200)
         )
         response.raise_for_status()
         answer = response.json()["message"]["content"].strip()
     except Exception:
         return {
-            "answer": "Model şu an yanıt veremedi. İlgili maddeler aşağıda gösteriliyor.",
+            "answer": "Model bu soruya zamanında yanıt veremedi. İlgili maddeler aşağıda gösteriliyor, cevabı oradan okuyabilirsiniz.",
             "sources": sources,
             "cached": False
         }
